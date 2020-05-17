@@ -91,10 +91,22 @@ const orm = {
       });
     });
   },
+
+  getFKAsync: (tableName, colName) => {
+    return new Promise((resolve, reject) =>{ 
+      const queryString = "SELECT DISTINCT a.REFERENCED_TABLE_NAME, a.COLUMN_NAME, a.REFERENCED_COLUMN_NAME FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE a JOIN INFORMATION_SCHEMA.REFERENTIAL_CONSTRAINTS b USING (CONSTRAINT_NAME) WHERE a.TABLE_SCHEMA = 'employees_db' AND a.TABLE_NAME = ? AND a.COLUMN_NAME =?"
+      connection.query(queryString, [tableName, colName], (err,result) => {
+        if (err) reject(err);
+        resolve(result);
+      })
+    })
+  }
 };
 
 // const test = async () => {
-//   console.table(await orm.getColumnsAsync("employee"));
+//   const test1 = await orm.getFKAsync("department");
+//   console.log(test1);
+//   console.table(test1);
 // };
 // test();
 // orm.endConnection;

@@ -11,6 +11,9 @@ const mainMenu = async () => {
     case `Create a Record`:
       createMenu();
       break;
+     case `Modify a Record`:
+       modifyMenu();
+       break; 
     case `Exit`:
       orm.endConnection();
       return;
@@ -41,6 +44,7 @@ const viewMenu = async () => {
   switch (viewMenuFilter) {
     case `View All`:
       console.table(viewData);
+      console.log(`--------------------`);
       break;
     case `View With Filter`:
       console.log(`What do you want to filter by?\n`);
@@ -55,10 +59,11 @@ const viewMenu = async () => {
       );
       switch (filterViewData.length) {
         case 0:
-          console.log("No records found matching that criteria.");
+          console.log(`No records found matching that criteria\n--------------------`);
           break;
         default:
           console.table(filterViewData);
+          console.log(`--------------------`);
           break;
       }
       break;
@@ -81,21 +86,39 @@ const createMenu = async () => {
       break;
   }
   const tableColInfo = await orm.getColumnsAsync(tableName);
+  console.log(tableColInfo);
   const createColumns = [];
   const createValues = [];
   for (i = 0; i < tableColInfo.length; i++) {
-    if (tableColInfo[i].Key != "PRI") {
+    if (tableColInfo[i].Extra != "auto_increment") {
+      let fkValues;
+      if (tableColInfo[i].Key === "MUL") {
+        const fkData = await orm.getFKAsync(tableName, tableColInfo[i].Field);
+        fkValues = await orm.selectAsync(
+          fkData[0].REFERENCED_COLUMN_NAME,
+          fkData[0].REFERENCED_TABLE_NAME,
+          "id"
+        );
+      }
       const createValue = await uprompt.colChoice(
         tableColInfo[i].Field,
         tableColInfo[i].Type,
-        tableColInfo[i].Null
+        tableColInfo[i].Null,
+        fkValues
       );
-      createValues.push(createValue);
-      createColumns.push(tableColInfo[i].Field);
+      if (createValue !== "") {
+        createValues.push(createValue);
+        createColumns.push(tableColInfo[i].Field);
+      }
     }
   }
-  console.log(createColumns);
-  console.log(createValues);
+  const createQuery = await orm.createAsync(tableName, createColumns, [
+    createValues,
+  ]);
+  console.log(
+    createQuery.affectedRows !== 0 ? `Record Created\n--------------------` : `Record Creation Failed\n--------------------`
+  );
+  mainMenu();
 };
 
 const viewEmployees = async () => {};
