@@ -71,7 +71,7 @@ const orm = {
       );
     });
   },
-  
+
   deleteAsync: (tableName, recordID) => {
     return new Promise((resolve, reject) => {
       const queryString = "DELETE FROM ?? WHERE id = ?";
@@ -81,6 +81,21 @@ const orm = {
       });
     });
   },
+
+  getColumnsAsync: (tableName) => {
+    return new Promise((resolve, reject) => {
+      const queryString = "SHOW COLUMNS FROM ??";
+      connection.query(queryString, [tableName], (err, result) => {
+        if (err) reject(err);
+        resolve(result);
+      });
+    });
+  },
 };
 
+// const test = async () => {
+//   console.table(await orm.getColumnsAsync("employee"));
+// };
+// test();
+// orm.endConnection;
 module.exports = orm;

@@ -4,6 +4,8 @@
   "description": "Unit 12 MySQL Homework: Employee Tracker",
   "main": "index.js",
   "dependencies": {
+    "console.table": "^0.10.0",
+    "inquirer": "^7.1.0",
     "mysql": "^2.18.1",
     "path": "^0.12.7"
   },
