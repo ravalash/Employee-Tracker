@@ -5,10 +5,12 @@ const schema = joi.object().keys({
     .string()
     .regex(/^[a-zA-Z\ \.\d]+$/)
     .min(3),
-  int: joi.number().min(1).max(10000),
+  int: joi.number().integer().min(1).max(2147483647),
+  decimal: joi.number().integer().min(1).max(9999999999)
 });
 
 const uprompt = {
+  //Returns list prompts from other menus
   listReturn: async (listChoices) => {
     const questions = {
       message: `Choose an Option:`,
@@ -20,6 +22,7 @@ const uprompt = {
     return menuChoice;
   },
 
+  //Returns confirm choices
   confirmChoice: async () => {
     const questions = {
       message: `Choose an Option:`,
@@ -30,17 +33,20 @@ const uprompt = {
     return confirmedChoice;
   },
 
+  //Returns open ended choices. Validates against passed parameters
   colChoice: async (field, type, nullOption, fkValues) => {
     const questions = {
       message: `Enter a Value for ${field}:`,
       name: `valueChoice`,
       type: `input`,
       validate: async function (data) {
+        //Checks if a null option is possible.
         if (nullOption === "NO" && data === "") {
           return "This entry can not be blank";
         } else if (nullOption === "YES" && data === "") {
           return true;
         }
+        //Checks if foreign key parameters were passed and whether the input meets the requirement
         if (typeof fkValues !== "undefined") {
           for (j = 0; j < fkValues.length; j++) {
             if (String(Object.values(fkValues[j])) === String(data)) {
@@ -53,6 +59,7 @@ const uprompt = {
             return `This value does not match an existing ${field}. Enter a valid ${field} choice or leave it blank.`;
           }
         }
+        //Checks type from MySql columns and validates using JOI
         if (type.toLowerCase().includes("varchar")) {
           return joi.validate({ name: data }, schema, function (err, value) {
             if (err) {
@@ -62,9 +69,17 @@ const uprompt = {
           });
         }
         if (type.toLowerCase().includes("int")) {
-          return joi.validate({ number: data }, schema, function (err, value) {
+          return joi.validate({ int: data }, schema, function (err, value) {
             if (err) {
-              return `Value should be an integer`;
+              return `Value should be a positive integer`;
+            }
+            return true;
+          });
+        }
+        if (type.toLowerCase().includes(`decimal(10,0)`)) {
+          return joi.validate({ decimal: data }, schema, function (err, value) {
+            if (err) {
+              return `Value should be a positive number with no decimal points`;
             }
             return true;
           });
@@ -75,6 +90,7 @@ const uprompt = {
     return valueChoice;
   },
 
+  //Value choice without validation
   valueChoice: async (valueName) => {
     const questions = {
       message: `Enter a Value for ${valueName}:`,
@@ -85,6 +101,7 @@ const uprompt = {
     return valueChoice;
   },
 
+  //Menus where only the data being passed as choices changes.
   mainMenu: () => {
     const options = {
       choices: [
@@ -92,6 +109,7 @@ const uprompt = {
         `Create a Record`,
         "Modify a Record",
         "Delete a Record",
+        "View Department Budget",
         "Exit",
       ],
     };

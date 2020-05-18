@@ -5,6 +5,7 @@ const orm = {
     connection.end();
   },
 
+  //Function for selecting any columns from table
   selectAsync: (tableCol, tableName, sortCol) => {
     return new Promise((resolve, reject) => {
       const queryString = "SELECT ?? FROM ?? ORDER BY ??";
@@ -19,6 +20,7 @@ const orm = {
     });
   },
 
+  //Function for selecting any columns from table with single where condition
   selectWhereAsync: (tableCol, tableName, colName, colValue, sortCol) => {
     return new Promise((resolve, reject) => {
       const queryString = "SELECT ?? FROM ?? WHERE ?? = ? ORDER BY ??";
@@ -33,6 +35,7 @@ const orm = {
     });
   },
 
+  //Function to display the budget and count of employees for a department.
   selectDeptBudget: (deptID) => {
     return new Promise((resolve, reject) => {
       const queryString =
@@ -44,6 +47,7 @@ const orm = {
     });
   },
 
+  //Function to create records given a table name, columns, and values
   createAsync: (tableName, colName, colValue) => {
     return new Promise((resolve, reject) => {
       const queryString = "INSERT INTO ?? (??) VALUES ?";
@@ -58,6 +62,7 @@ const orm = {
     });
   },
 
+  //Function to modify one column entry of a record in a table
   updateAsync: (tableName, colName, colValue, recordID) => {
     return new Promise((resolve, reject) => {
       const queryString = "update ?? SET ?? = ? where id = ?";
@@ -72,6 +77,7 @@ const orm = {
     });
   },
 
+  //Function to delete a record in a table
   deleteAsync: (tableName, recordID) => {
     return new Promise((resolve, reject) => {
       const queryString = "DELETE FROM ?? WHERE id = ?";
@@ -82,6 +88,7 @@ const orm = {
     });
   },
 
+  //Function to return column data for a table
   getColumnsAsync: (tableName) => {
     return new Promise((resolve, reject) => {
       const queryString = "SHOW COLUMNS FROM ??";
@@ -92,6 +99,7 @@ const orm = {
     });
   },
 
+  //Function to return foreign key data from a column
   getFKAsync: (tableName, colName) => {
     return new Promise((resolve, reject) => {
       const queryString =
@@ -104,19 +112,4 @@ const orm = {
   },
 };
 
-// const test = async () => {
-//   const tableName = `employee`;
-//   const deleteID = 2;
-//   const test1 = await orm.selectWhereAsync(
-//     `*`,
-//     tableName,
-//     `id`,
-//     deleteID,
-//     `id`
-//   );
-//   console.log(test1);
-//   console.table(test1);
-// };
-// test();
-// orm.endConnection;
 module.exports = orm;

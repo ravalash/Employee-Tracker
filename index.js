@@ -2,6 +2,8 @@ const orm = require("./config/orm.js");
 const uprompt = require("./config/uprompt.js");
 const cTable = require("console.table");
 
+
+//Main menu for initial choice
 const mainMenu = async () => {
   const mainMenuChoice = await uprompt.mainMenu();
   switch (mainMenuChoice) {
@@ -17,6 +19,9 @@ const mainMenu = async () => {
     case `Delete a Record`:
       deleteMenu();
       break;
+    case `View Department Budget`:
+      departmentMenu();
+      break;
     case `Exit`:
       orm.endConnection();
       return;
@@ -25,8 +30,39 @@ const mainMenu = async () => {
   }
 };
 
+//Specialized function to display budget by department ID
+const departmentMenu = async () => {
+  const departmentID = await uprompt.valueChoice(
+    `the ID Number of the Department to View the Budget for`
+  );
+  const departmentViewData = await orm.selectWhereAsync(
+    `*`,
+    `department`,
+    `id`,
+    departmentID,
+    `id`
+  );
+  //Checks to see if the query returned data
+  if (departmentViewData.length === 0) {
+    console.log(`ID not found in database. Do you want to try again?`);
+    const departmentRetry = await uprompt.confirmChoice();
+    if (!departmentRetry) {
+      return mainMenu();
+    } else {
+      return departmentMenu();
+    }
+  }
+  //Queries department data
+  const departmentBudgetData = await orm.selectDeptBudget(departmentID);
+  console.table(departmentBudgetData);
+  console.log(`----------------------------------------`);
+  mainMenu();
+};
+
+//Function to present delete options
 const deleteMenu = async (table) => {
   let tableName;
+  //Checks if this is a loop from within the function
   if (typeof table === "undefined") {
     const deleteMenuChoice = await uprompt.deleteMenu();
     switch (deleteMenuChoice) {
@@ -43,44 +79,48 @@ const deleteMenu = async (table) => {
   } else {
     tableName = table;
   }
-  console.log(tableName);
   const deleteID = await uprompt.valueChoice(
     `the ID Number of the ${tableName} Record to Delete`
   );
-  console.log(deleteID);
-  const deleteViewData = await orm.selectWhereAsync(`*`, tableName, `id`, deleteID, `id`);
-  console.log(deleteViewData);
-
-
-  
+  const deleteViewData = await orm.selectWhereAsync(
+    `*`,
+    tableName,
+    `id`,
+    deleteID,
+    `id`
+  );
+  //Checks if the chosen ID number is valid
   if (deleteViewData.length === 0) {
     console.log(`ID not found in database. Do you want to try again?`);
     const deleteRetry = await uprompt.confirmChoice();
     if (!deleteRetry) {
-      console.log("no");
       return mainMenu();
     } else {
-      console.log("yes");
       return deleteMenu(tableName);
     }
   }
+  //Confirms the record should be deleted
   console.table(deleteViewData);
   console.log(`The above table will be deleted. Do you want to proceed?`);
   const deleteConfirm = await uprompt.confirmChoice();
-      if (deleteConfirm) {
-        const deleteQuery = await orm.deleteAsync (tableName,  deleteID);
-        console.log(deleteQuery)
-        console.log(deleteQuery.affectedRows !== 0 ? `Record deleted successfully`: `Record deletion failed`);
-      }
-      else{
-        console.log(`Changes discarded`)
-      }
-
+  if (deleteConfirm) {
+    const deleteQuery = await orm.deleteAsync(tableName, deleteID);
+    console.log(
+      deleteQuery.affectedRows !== 0
+        ? `Record deleted successfully`
+        : `Record deletion failed`
+    );
+  } else {
+    console.log(`Changes discarded`);
+  }
+  console.log(`----------------------------------------`);
   mainMenu();
-}
+};
 
+//Function to modify existing data
 const modifyMenu = async (table) => {
   let tableName;
+  //Checks if function is being called from within itself
   if (typeof table === "undefined") {
     const modifyMenuChoice = await uprompt.modifyMenu();
     switch (modifyMenuChoice) {
@@ -98,8 +138,6 @@ const modifyMenu = async (table) => {
     tableName = table;
   }
   const tableColInfo = await orm.getColumnsAsync(tableName);
-  console.table(tableColInfo);
-  console.log(tableColInfo);
   const modifyID = await uprompt.valueChoice(
     `the ID Number of the ${tableName} Record to Modify`
   );
@@ -110,19 +148,19 @@ const modifyMenu = async (table) => {
     modifyID,
     `id`
   );
+  //Checks if the ID number chosen is valid
   if (modifyViewData.length === 0) {
     console.log(`ID not found in database. Do you want to try again?`);
     const modifyRetry = await uprompt.confirmChoice();
     if (!modifyRetry) {
-      console.log("no");
       return mainMenu();
     } else {
-      console.log("yes");
       return modifyMenu(tableName);
     }
   }
   console.table(modifyViewData);
   const modifyViewArray = [];
+  //Chooses columns that can be set by user and not by auto increment
   tableColInfo.forEach((element) => {
     if (element.Extra !== "auto_increment") {
       modifyViewArray.push(element.Field);
@@ -130,12 +168,13 @@ const modifyMenu = async (table) => {
   });
   console.log("Which field do you want to modify?");
   const modifyCol = await uprompt.arrayChoice(modifyViewArray);
-  console.log(modifyCol);
   let fkValues;
+  //Checks to see if any values are tied to foreign keys
   for (i = 0; i < tableColInfo.length; i++) {
     if (tableColInfo[i].Field === modifyCol) {
       if (tableColInfo[i].Key === "MUL") {
         const fkData = await orm.getFKAsync(tableName, modifyCol);
+        //Queries possible values for validation
         fkValues = await orm.selectAsync(
           fkData[0].REFERENCED_COLUMN_NAME,
           fkData[0].REFERENCED_TABLE_NAME,
@@ -148,22 +187,34 @@ const modifyMenu = async (table) => {
         tableColInfo[i].Null,
         fkValues
       );
+      //Confirms record modification
       console.log(
         `${tableColInfo[i].Field} will be replaced with ${modifyValue}. Proceed?`
       );
       const modifyConfirm = await uprompt.confirmChoice();
       if (modifyConfirm) {
-        const modifyQuery = await orm.updateAsync (tableName, modifyCol, modifyValue, modifyID);
-        console.log(modifyQuery.changedRows !== 0 ? `Record changed successfully`: `Record change failed`);
+        const modifyQuery = await orm.updateAsync(
+          tableName,
+          modifyCol,
+          modifyValue,
+          modifyID
+        );
+        //Checks for success of request
+        console.log(
+          modifyQuery.changedRows !== 0
+            ? `Record changed successfully`
+            : `Record change failed`
+        );
+      } else {
+        console.log(`Changes discarded`);
       }
-      else{
-        console.log(`Changes discarded`)
-      }
+      console.log(`----------------------------------------`);
     }
   }
   mainMenu();
 };
 
+//Function to handle viewing of data
 const viewMenu = async () => {
   const viewMenuChoice = await uprompt.viewMenu();
   let viewData;
@@ -182,14 +233,16 @@ const viewMenu = async () => {
       tableName = `department`;
       break;
   }
+  //Checks to see if filter should be applied
   const viewMenuFilter = await uprompt.filterChoice();
   switch (viewMenuFilter) {
     case `View All`:
       console.table(viewData);
-      console.log(`--------------------`);
+      console.log(`----------------------------------------`);
       break;
     case `View With Filter`:
       console.log(`What do you want to filter by?\n`);
+      //Presents existing keys as choices for filter
       const viewCol = await uprompt.arrayChoice(Object.keys(viewData[0]));
       const viewValue = await uprompt.valueChoice(viewCol);
       const filterViewData = await orm.selectWhereAsync(
@@ -202,12 +255,12 @@ const viewMenu = async () => {
       switch (filterViewData.length) {
         case 0:
           console.log(
-            `No records found matching that criteria\n--------------------`
+            `No records found matching that criteria\n----------------------------------------`
           );
           break;
         default:
           console.table(filterViewData);
-          console.log(`--------------------`);
+          console.log(`----------------------------------------`);
           break;
       }
       break;
@@ -215,6 +268,7 @@ const viewMenu = async () => {
   mainMenu();
 };
 
+//Function for creating records
 const createMenu = async () => {
   const createMenuChoice = await uprompt.createMenu();
   let tableName;
@@ -229,12 +283,14 @@ const createMenu = async () => {
       tableName = `department`;
       break;
   }
+  //Pulls existing columns for reference
   const tableColInfo = await orm.getColumnsAsync(tableName);
-  console.log(tableColInfo);
+  //Arrays to store column names and values
   const createColumns = [];
   const createValues = [];
   for (i = 0; i < tableColInfo.length; i++) {
     if (tableColInfo[i].Extra != "auto_increment") {
+      //Pulls forgeign key values for validation 
       let fkValues;
       if (tableColInfo[i].Key === "MUL") {
         const fkData = await orm.getFKAsync(tableName, tableColInfo[i].Field);
@@ -256,18 +312,18 @@ const createMenu = async () => {
       }
     }
   }
+  //Query to create record in MySql
   const createQuery = await orm.createAsync(tableName, createColumns, [
     createValues,
   ]);
   console.log(
     createQuery.affectedRows !== 0
-      ? `Record Created\n--------------------`
-      : `Record Creation Failed\n--------------------`
+      ? `Record Created`
+      : `Record Creation Failed`
   );
+  console.log(`----------------------------------------`);
   mainMenu();
 };
 
-
 mainMenu();
 
-// orm.endConnection();
