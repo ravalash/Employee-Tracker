@@ -20,8 +20,17 @@ const uprompt = {
     return menuChoice;
   },
 
+  confirmChoice: async () => {
+    const questions = {
+      message: `Choose an Option:`,
+      name: `confirmedChoice`,
+      type: `confirm`,
+    };
+    const { confirmedChoice } = await inquirer.prompt(questions);
+    return confirmedChoice;
+  },
+
   colChoice: async (field, type, nullOption, fkValues) => {
-    let validFunc;
     const questions = {
       message: `Enter a Value for ${field}:`,
       name: `valueChoice`,
@@ -103,6 +112,19 @@ const uprompt = {
     return uprompt.listReturn(options);
   },
 
+  modifyMenu: () => {
+    const options = {
+      choices: [`Modify an Employee`, `Modify a Role`, `Modify a Department`],
+    };
+    return uprompt.listReturn(options);
+  },
+
+  deleteMenu: () => {
+    const options = {
+      choices: [`Delete an Employee`, `Delete a Role`, `Delete a Department`],
+    };
+    return uprompt.listReturn(options);
+  },
   filterChoice: () => {
     const options = {
       choices: [`View All`, `View With Filter`],
@@ -115,18 +137,6 @@ const uprompt = {
       choices: array,
     };
     return uprompt.listReturn(options);
-  },
-
-  validateCreate: async (data, other) => {
-    console.log(questions);
-    console.log(data);
-    console.log(other);
-    return joi.validate({ name: data }, schema, function (err, value) {
-      if (err) {
-        return `Entry should be a word with no special characters`;
-      }
-      return true;
-    });
   },
 };
 
